@@ -201,7 +201,7 @@ Resources:
 {%     else %}
       ImageId:
         Fn::FindInMap:
-#        - RegionMapping
+        - RegionMapping
         - Ref: AWS::Region
         - {{ instance.image | default(aws_default_image) }}
 {%     endif %}
