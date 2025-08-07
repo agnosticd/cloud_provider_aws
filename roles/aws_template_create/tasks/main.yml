@@ -20,7 +20,7 @@
 
   - name: Set cloudformation_template
     ansible.builtin.set_fact:
-      cloudformation_template: "{{ output_dir }}/{{ config }}.{{ guid }}.{{ cloud_provider }}_cloud_template"
+      cloudformation_template: "{{ output_dir }}/{{ config }}.{{ guid }}.{{ cloud_provider }}_cloud_template.yaml"
 
   - name: Wait a bit for the previous stack and child resources to be deleted
     when:
