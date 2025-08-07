@@ -1,6 +1,7 @@
 ---
 aws_comment: Created by Ansible Agnostic Deployer V2
 cloudformation_retries: 1
+cloudformation_template_src: "templates/cloud_template.yaml.j2"
 
 #################################################################
 # VPC
