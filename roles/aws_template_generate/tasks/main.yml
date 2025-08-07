@@ -8,9 +8,6 @@
   - aws_availability_zone is undefined
   ansible.builtin.include_tasks: locate_availability_zones.yml
 
-# - name: Locate template
-#   ansible.builtin.import_tasks: locate_template.yml
-
 - name: Security groups
   ansible.builtin.import_tasks: security_groups.yml
 
