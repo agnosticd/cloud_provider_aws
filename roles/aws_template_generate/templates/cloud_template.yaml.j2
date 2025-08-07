@@ -1,4 +1,5 @@
-#jinja2: lstrip_blocks: True
+#jinja2: lstrip_blocks: "True"
+#touch
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
@@ -90,10 +91,10 @@ Resources:
   {{ security_group['name'] }}{{ rule['name'] }}:
     Type: "AWS::EC2::SecurityGroup{{ rule['rule_type'] }}"
     Properties:
-      GroupId:
-        Fn::GetAtt:
-          - "{{ security_group['name'] }}"
-          - GroupId
+     GroupId:
+       Fn::GetAtt:
+         - "{{ security_group['name'] }}"
+         - GroupId
      IpProtocol: {{ rule['protocol'] }}
      FromPort: {{ rule['from_port'] }}
      ToPort: {{ rule['to_port'] }}
@@ -135,7 +136,7 @@ Resources:
   DnsPublicDelegation:
     Type: "AWS::Route53::RecordSetGroup"
     DependsOn:
-    - DnsZonePublic
+      - DnsZonePublic
     Properties:
 {%   if HostedZoneId is defined %}
       HostedZoneId: "{{ HostedZoneId }}"
@@ -260,7 +261,7 @@ Resources:
             VolumeSize: "{{ instance['rootfs_size'] | default(aws_default_rootfs_size) }}"
             VolumeType: "{{ aws_default_volume_type }}"
 {%     endif %}
-{%     for vol in instance.volumes|default([]) if vol.enable | default(true) %}
+{%     for vol in instance.volumes | default([]) if vol.enable | default(true) %}
         - DeviceName: "{{ vol.name | default(vol.device_name) }}"
           Ebs:
 {%       if cloud_provider in vol and 'type' in vol.ec2 %}
@@ -288,7 +289,7 @@ Resources:
           Type: A
           TTL: {{ aws_dns_ttl_private }}
           ResourceRecords:
-            - "Fn::GetAtt":
+            - "Fn::GetAtt":          
               - {{ instance.name | replace('-', '') }}{{ loop.index }}
               - PrivateIp
 
@@ -377,7 +378,7 @@ Resources:
           Ref: Route53User
 {% endif %}
 
-{% if sandbox_student_user is defined
+{% if sandbox_student_user is defined 
    and sandbox_name is defined
 %}
   StudentUser:
