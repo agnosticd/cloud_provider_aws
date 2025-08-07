@@ -8,15 +8,15 @@
   - aws_availability_zone is undefined
   ansible.builtin.include_tasks: locate_availability_zones.yml
 
-- name: Locate template
-  ansible.builtin.import_tasks: locate_template.yml
+# - name: Locate template
+#   ansible.builtin.import_tasks: locate_template.yml
 
 - name: Security groups
   ansible.builtin.import_tasks: security_groups.yml
 
 - name: Set fact for cloudformation template
   ansible.builtin.set_fact:
-    cloudformation_template: "{{ output_dir }}/{{ config }}.{{ guid }}.{{ cloud_provider }}_cloud_template"
+    cloudformation_template: "{{ output_dir }}/{{ config }}.{{ guid }}.{{ cloud_provider }}_cloud_template.yaml"
 
 - name: Print cloudformation_template path
   ansible.builtin.debug:
