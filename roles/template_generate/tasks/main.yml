@@ -11,7 +11,7 @@
 - name: Security groups
   ansible.builtin.import_tasks: security_groups.yml
 
-- name: Set fact for cloudformation template
+- name: Set fact for cloudformation template filename
   ansible.builtin.set_fact:
     cloudformation_template: "{{ output_dir }}/{{ config }}.{{ guid }}.{{ cloud_provider }}_cloud_template.yaml"
 

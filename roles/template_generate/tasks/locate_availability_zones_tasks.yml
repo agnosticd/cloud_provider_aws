@@ -50,6 +50,7 @@
       | default(__all_possible_azs[0])
       | default([])
       | intersect(__azs)
+      | sort
       }}
 
 - name: Abort if no AZ is found
