@@ -8,11 +8,3 @@
 - name: Print debug information about the custom image used
   ansible.builtin.debug:
     var: custom_image
-
-- name: Skip packer tasks if the tags in the image say to do so
-  when:
-  - custom_image is defined
-  - custom_image.tags.skip_packer_tasks is defined
-  - custom_image.tags.skip_packer_tasks in ['true', 'yes', 'True', 'Yes']
-  ansible.builtin.set_fact:
-    skip_packer_tasks: true

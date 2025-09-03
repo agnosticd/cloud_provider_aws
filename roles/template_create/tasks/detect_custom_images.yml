@@ -12,10 +12,6 @@
       tag:stages: "*{{ custom_image_stage | default('unknown') }}*"
   register: r_amifacts
 
-- name: By default do not skip docker tasks
-  ansible.builtin.set_fact:
-    skip_packer_tasks: false
-
 - name: Select AMI among candidates
   when:
   - r_amifacts is succeeded
