@@ -7,7 +7,7 @@ cloudformation_template_src: "templates/cloud_template.yaml.j2"
 # VPC
 #################################################################
 aws_vpc_cidr: 192.168.0.0/16
-aws_vpc_name: "{{ cluster_dns_zone }}"
+aws_vpc_name: "{{ guid }}.{{ base_domain }}"
 
 #################################################################
 # Subnet
