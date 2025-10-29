@@ -1,0 +1,6 @@
+---
+- name: Import EC2 tasks
+  ansible.builtin.import_tasks: ec2.yml
+
+- name: Import cloudformation tasks
+  ansible.builtin.import_tasks: cloudformation.yml
