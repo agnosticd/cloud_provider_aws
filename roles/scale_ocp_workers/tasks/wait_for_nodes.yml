@@ -16,6 +16,9 @@
 # First, try waiting for the initial period without CSR approval
 - name: Initial wait for worker nodes (before CSR approval)
   kubernetes.core.k8s_info:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
     api_version: v1
     kind: Node
     label_selectors:
@@ -68,6 +71,9 @@
     - not initial_wait_succeeded
     - not (worker_scale_approve_csrs | default(true) | bool)
   kubernetes.core.k8s_info:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
     api_version: v1
     kind: Node
     label_selectors:
@@ -89,6 +95,9 @@
 # Get final node status
 - name: Get final worker node status
   kubernetes.core.k8s_info:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
     api_version: v1
     kind: Node
     label_selectors:

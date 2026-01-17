@@ -1,4 +1,9 @@
 ---
+# OpenShift API authentication (required)
+# openshift_api_url: https://api.cluster.example.com:6443
+# openshift_cluster_admin_token: <token>
+# openshift_validate_certs: false
+
 # Number of worker nodes to scale to
 # Workers are distributed round-robin across available availability zones
 worker_instance_count: 0
