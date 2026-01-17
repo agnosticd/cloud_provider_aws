@@ -1,0 +1,93 @@
+---
+# Create new MachineSets with a different instance type
+# Clones existing MachineSet specs and updates instance type and naming
+
+- name: Validate worker_machineset_suffix is provided
+  ansible.builtin.fail:
+    msg: "worker_machineset_suffix is required when creating MachineSets with a different instance type"
+  when: worker_machineset_suffix | default('') | length == 0
+
+- name: Calculate round-robin distribution
+  ansible.builtin.set_fact:
+    machineset_count: "{{ existing_machinesets | length }}"
+
+- name: Build replica distribution list
+  ansible.builtin.set_fact:
+    replica_distribution: >-
+      {%- set total = worker_instance_count | int -%}
+      {%- set count = machineset_count | int -%}
+      {%- set base = total // count -%}
+      {%- set remainder = total % count -%}
+      {%- set result = [] -%}
+      {%- for i in range(count) -%}
+        {%- if i < remainder -%}
+          {%- set _ = result.append(base + 1) -%}
+        {%- else -%}
+          {%- set _ = result.append(base) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ result }}
+
+- name: Display new MachineSet plan
+  ansible.builtin.debug:
+    msg: >-
+      Creating {{ item.0.metadata.name }}-{{ worker_machineset_suffix }}
+      with {{ item.1 }} replicas ({{ worker_instance_type }})
+  loop: "{{ existing_machinesets | zip(replica_distribution) | list }}"
+  loop_control:
+    label: "{{ item.0.metadata.name }}"
+
+- name: Create new MachineSets
+  kubernetes.core.k8s:
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    namespace: openshift-machine-api
+    name: "{{ item.0.metadata.name }}-{{ worker_machineset_suffix }}"
+    state: present
+    definition:
+      metadata:
+        labels:
+          machine.openshift.io/cluster-api-cluster: "{{ cluster_infrastructure_name }}"
+      spec:
+        replicas: "{{ item.1 | int }}"
+        selector:
+          matchLabels:
+            machine.openshift.io/cluster-api-cluster: "{{ cluster_infrastructure_name }}"
+            machine.openshift.io/cluster-api-machineset: "{{ item.0.metadata.name }}-{{ worker_machineset_suffix }}"
+        template:
+          metadata:
+            labels:
+              machine.openshift.io/cluster-api-cluster: "{{ cluster_infrastructure_name }}"
+              machine.openshift.io/cluster-api-machine-role: worker
+              machine.openshift.io/cluster-api-machine-type: worker
+              machine.openshift.io/cluster-api-machineset: "{{ item.0.metadata.name }}-{{ worker_machineset_suffix }}"
+          spec:
+            lifecycleHooks: {}
+            metadata: {}
+            providerSpec:
+              value:
+                apiVersion: machine.openshift.io/v1beta1
+                kind: AWSMachineProviderConfig
+                ami:
+                  id: "{{ item.0.spec.template.spec.providerSpec.value.ami.id }}"
+                blockDevices: "{{ item.0.spec.template.spec.providerSpec.value.blockDevices }}"
+                credentialsSecret:
+                  name: aws-cloud-credentials
+                deviceIndex: 0
+                iamInstanceProfile:
+                  id: "{{ item.0.spec.template.spec.providerSpec.value.iamInstanceProfile.id }}"
+                instanceType: "{{ worker_instance_type }}"
+                metadata:
+                  creationTimestamp: null
+                metadataServiceOptions: {}
+                placement:
+                  availabilityZone: "{{ item.0.spec.template.spec.providerSpec.value.placement.availabilityZone }}"
+                  region: "{{ item.0.spec.template.spec.providerSpec.value.placement.region }}"
+                securityGroups: "{{ item.0.spec.template.spec.providerSpec.value.securityGroups }}"
+                subnet: "{{ item.0.spec.template.spec.providerSpec.value.subnet }}"
+                tags: "{{ item.0.spec.template.spec.providerSpec.value.tags }}"
+                userDataSecret:
+                  name: worker-user-data
+  loop: "{{ existing_machinesets | zip(replica_distribution) | list }}"
+  loop_control:
+    label: "{{ item.0.metadata.name }}-{{ worker_machineset_suffix }}"

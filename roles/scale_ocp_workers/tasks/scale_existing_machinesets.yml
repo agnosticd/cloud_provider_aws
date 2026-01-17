@@ -1,0 +1,45 @@
+---
+# Scale existing MachineSets using round-robin distribution across AZs
+# Example: 5 workers across 3 AZs = [2, 2, 1]
+
+- name: Calculate round-robin distribution
+  ansible.builtin.set_fact:
+    machineset_count: "{{ existing_machinesets | length }}"
+
+- name: Build replica distribution list
+  ansible.builtin.set_fact:
+    replica_distribution: >-
+      {%- set total = worker_instance_count | int -%}
+      {%- set count = machineset_count | int -%}
+      {%- set base = total // count -%}
+      {%- set remainder = total % count -%}
+      {%- set result = [] -%}
+      {%- for i in range(count) -%}
+        {%- if i < remainder -%}
+          {%- set _ = result.append(base + 1) -%}
+        {%- else -%}
+          {%- set _ = result.append(base) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ result }}
+
+- name: Display scaling plan
+  ansible.builtin.debug:
+    msg: "Scaling {{ item.0.metadata.name }} to {{ item.1 }} replicas"
+  loop: "{{ existing_machinesets | zip(replica_distribution) | list }}"
+  loop_control:
+    label: "{{ item.0.metadata.name }}"
+
+- name: Scale MachineSets
+  kubernetes.core.k8s:
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    namespace: openshift-machine-api
+    name: "{{ item.0.metadata.name }}"
+    state: present
+    definition:
+      spec:
+        replicas: "{{ item.1 | int }}"
+  loop: "{{ existing_machinesets | zip(replica_distribution) | list }}"
+  loop_control:
+    label: "{{ item.0.metadata.name }} -> {{ item.1 }} replicas"
