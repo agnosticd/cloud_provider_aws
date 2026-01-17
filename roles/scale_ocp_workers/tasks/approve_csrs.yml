@@ -1,0 +1,84 @@
+---
+# Approve pending CSRs for worker nodes
+# This is called recursively until all expected nodes are Ready
+
+- name: Get all CSRs
+  kubernetes.core.k8s_info:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
+    api_version: certificates.k8s.io/v1
+    kind: CertificateSigningRequest
+  register: r_all_csrs
+
+- name: Filter for pending CSRs
+  ansible.builtin.set_fact:
+    pending_csrs: "{{ r_all_csrs.resources | selectattr('status', 'equalto', {}) | list }}"
+
+- name: Display pending CSRs
+  ansible.builtin.debug:
+    msg: "Found {{ pending_csrs | length }} pending CSR(s)"
+
+- name: Approve pending CSRs
+  when: pending_csrs | length > 0
+  kubernetes.core.k8s:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
+    api_version: certificates.k8s.io/v1
+    kind: CertificateSigningRequest
+    name: "{{ item.metadata.name }}"
+    state: present
+    definition:
+      status:
+        conditions:
+          - type: Approved
+            status: "True"
+            reason: AnsibleApproval
+            message: "CSR was approved by Ansible scale_ocp_workers role."
+  loop: "{{ pending_csrs }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+
+- name: Get current worker nodes
+  kubernetes.core.k8s_info:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
+    api_version: v1
+    kind: Node
+    label_selectors:
+      - "node-role.kubernetes.io/worker"
+      - "!node-role.kubernetes.io/master"
+  register: r_worker_nodes
+
+- name: Count Ready worker nodes
+  ansible.builtin.set_fact:
+    ready_worker_count: >-
+      {{
+        r_worker_nodes.resources
+        | selectattr('status.conditions', 'defined')
+        | list
+        | json_query("[?status.conditions[?type=='Ready' && status=='True']]")
+        | length
+      }}
+
+- name: Display current Ready count
+  ansible.builtin.debug:
+    msg: "Ready workers: {{ ready_worker_count }}/{{ expected_worker_count }}"
+
+- name: Recursively approve CSRs if nodes are not Ready yet
+  when:
+    - ready_worker_count | int < expected_worker_count | int
+    - csr_approval_retries | default(worker_scale_csr_retries) | int > 0
+  block:
+    - name: Wait before checking again
+      ansible.builtin.pause:
+        seconds: "{{ worker_scale_csr_delay }}"
+
+    - name: Decrement retry counter
+      ansible.builtin.set_fact:
+        csr_approval_retries: "{{ csr_approval_retries | default(worker_scale_csr_retries) | int - 1 }}"
+
+    - name: Recursively include CSR approval
+      ansible.builtin.include_tasks: approve_csrs.yml

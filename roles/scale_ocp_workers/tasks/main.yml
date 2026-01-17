@@ -1,0 +1,80 @@
+---
+- name: Scale OCP workers on AWS
+  module_defaults:
+    group/k8s:
+      host: "{{ openshift_api_url }}"
+      api_key: "{{ openshift_cluster_admin_token }}"
+      validate_certs: "{{ openshift_validate_certs | default(false) }}"
+  block:
+
+    - name: Get all MachineSets
+      kubernetes.core.k8s_info:
+        api_version: machine.openshift.io/v1beta1
+        kind: MachineSet
+        namespace: openshift-machine-api
+      register: r_all_machinesets
+
+    - name: Filter worker MachineSets
+      ansible.builtin.set_fact:
+        r_machinesets: >-
+          {%- set worker_machinesets = [] -%}
+          {%- for ms in r_all_machinesets.resources -%}
+            {%- set labels = ms.spec.template.metadata.labels | default({}) -%}
+            {%- if labels.get('machine.openshift.io/cluster-api-machine-role') == 'worker' -%}
+              {%- set _ = worker_machinesets.append(ms) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ worker_machinesets }}
+
+    - name: Fail if no worker MachineSets found
+      ansible.builtin.fail:
+        msg: "No worker MachineSets found in openshift-machine-api namespace"
+      when: r_machinesets | length == 0
+
+    - name: Set MachineSet facts
+      ansible.builtin.set_fact:
+        existing_machinesets: "{{ r_machinesets }}"
+        existing_instance_type: "{{ r_machinesets[0].spec.template.spec.providerSpec.value.instanceType }}"
+        cluster_infrastructure_name: "{{ r_machinesets[0].metadata.labels['machine.openshift.io/cluster-api-cluster'] }}"
+
+    - name: Get current worker node count
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Node
+        label_selectors:
+          - "node-role.kubernetes.io/worker"
+      register: r_worker_nodes
+
+    - name: Set current worker count
+      ansible.builtin.set_fact:
+        current_worker_count: "{{ r_worker_nodes.resources | length }}"
+
+    - name: Display current state
+      ansible.builtin.debug:
+        msg:
+          - "Cluster: {{ cluster_infrastructure_name }}"
+          - "Current workers: {{ current_worker_count }}"
+          - "Desired workers: {{ worker_instance_count }}"
+          - "Existing instance type: {{ existing_instance_type }}"
+          - "Requested instance type: {{ worker_instance_type | default('(use existing)') }}"
+          - "Available MachineSets: {{ existing_machinesets | map(attribute='metadata.name') | list }}"
+
+    - name: Determine if we need new MachineSets
+      ansible.builtin.set_fact:
+        needs_new_machinesets: >-
+          {{
+            worker_instance_type | default('') | length > 0
+            and worker_instance_type != existing_instance_type
+          }}
+
+    - name: Scale existing MachineSets
+      when: not needs_new_machinesets
+      ansible.builtin.include_tasks: scale_existing_machinesets.yml
+
+    - name: Create new MachineSets with different instance type
+      when: needs_new_machinesets
+      ansible.builtin.include_tasks: create_new_machinesets.yml
+
+    - name: Wait for worker nodes to be Ready
+      when: worker_instance_count | int > 0
+      ansible.builtin.include_tasks: wait_for_nodes.yml

@@ -1,0 +1,112 @@
+---
+# Wait for worker nodes to reach Ready status
+# First tries a quick wait, then falls back to CSR approval if needed
+
+- name: Calculate expected worker count
+  ansible.builtin.set_fact:
+    expected_worker_count: "{{ worker_instance_count | int }}"
+
+- name: Display wait parameters
+  ansible.builtin.debug:
+    msg:
+      - "Waiting for {{ expected_worker_count }} worker nodes to be Ready"
+      - "Initial wait: {{ worker_scale_csr_wait_seconds }}s before CSR approval"
+      - "CSR approval enabled: {{ worker_scale_approve_csrs }}"
+
+# First, try waiting for the initial period without CSR approval
+- name: Initial wait for worker nodes (before CSR approval)
+  kubernetes.core.k8s_info:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
+    api_version: v1
+    kind: Node
+    label_selectors:
+      - "node-role.kubernetes.io/worker"
+      - "!node-role.kubernetes.io/master"
+  register: r_worker_nodes
+  until: >-
+    (r_worker_nodes.resources | length >= expected_worker_count | int)
+    and
+    (r_worker_nodes.resources
+      | selectattr('status.conditions', 'defined')
+      | rejectattr('status.conditions', 'equalto', [])
+      | list
+      | json_query("[?status.conditions[?type=='Ready' && status=='True']]")
+      | length >= expected_worker_count | int)
+  retries: "{{ (worker_scale_csr_wait_seconds | int / worker_scale_delay | int) | int }}"
+  delay: "{{ worker_scale_delay }}"
+  ignore_errors: true
+
+- name: Check if initial wait succeeded
+  ansible.builtin.set_fact:
+    initial_wait_succeeded: >-
+      {{
+        (r_worker_nodes.resources | length >= expected_worker_count | int)
+        and
+        (r_worker_nodes.resources
+          | selectattr('status.conditions', 'defined')
+          | rejectattr('status.conditions', 'equalto', [])
+          | list
+          | json_query("[?status.conditions[?type=='Ready' && status=='True']]")
+          | length >= expected_worker_count | int)
+      }}
+
+# If initial wait failed and CSR approval is enabled, start approving CSRs
+- name: Approve CSRs and wait for nodes
+  when:
+    - not initial_wait_succeeded
+    - worker_scale_approve_csrs | default(true) | bool
+  block:
+    - name: Display CSR approval message
+      ansible.builtin.debug:
+        msg: "Nodes not Ready after {{ worker_scale_csr_wait_seconds }}s - starting CSR approval"
+
+    - name: Include CSR approval tasks
+      ansible.builtin.include_tasks: approve_csrs.yml
+
+# Final wait if CSR approval is disabled but initial wait failed
+- name: Final wait for worker nodes (CSR approval disabled)
+  when:
+    - not initial_wait_succeeded
+    - not (worker_scale_approve_csrs | default(true) | bool)
+  kubernetes.core.k8s_info:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
+    api_version: v1
+    kind: Node
+    label_selectors:
+      - "node-role.kubernetes.io/worker"
+      - "!node-role.kubernetes.io/master"
+  register: r_worker_nodes
+  until: >-
+    (r_worker_nodes.resources | length >= expected_worker_count | int)
+    and
+    (r_worker_nodes.resources
+      | selectattr('status.conditions', 'defined')
+      | rejectattr('status.conditions', 'equalto', [])
+      | list
+      | json_query("[?status.conditions[?type=='Ready' && status=='True']]")
+      | length >= expected_worker_count | int)
+  retries: "{{ worker_scale_retries }}"
+  delay: "{{ worker_scale_delay }}"
+
+# Get final node status
+- name: Get final worker node status
+  kubernetes.core.k8s_info:
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_cluster_admin_token }}"
+    validate_certs: "{{ openshift_validate_certs | default(false) }}"
+    api_version: v1
+    kind: Node
+    label_selectors:
+      - "node-role.kubernetes.io/worker"
+      - "!node-role.kubernetes.io/master"
+  register: r_worker_nodes_final
+
+- name: Display final worker node status
+  ansible.builtin.debug:
+    msg:
+      - "Worker nodes Ready: {{ r_worker_nodes_final.resources | length }}"
+      - "Node names: {{ r_worker_nodes_final.resources | map(attribute='metadata.name') | list }}"
