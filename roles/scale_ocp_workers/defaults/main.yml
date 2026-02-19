@@ -16,7 +16,7 @@ worker_instance_type: ""
 # Custom suffix for new MachineSets when instance type differs
 # Example: "gpu", "highmem", "compute"
 # Results in names like: ocp-xjgsc-worker-us-east-2a-gpu
-worker_machineset_suffix: ""
+worker_machineset_suffix: "compute"
 
 # Timeout settings for waiting for nodes to become Ready
 worker_scale_timeout: 600
