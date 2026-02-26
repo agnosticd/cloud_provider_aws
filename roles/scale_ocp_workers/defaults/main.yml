@@ -30,3 +30,11 @@ worker_scale_approve_csrs: true
 worker_scale_csr_wait_seconds: 180
 worker_scale_csr_retries: 30
 worker_scale_csr_delay: 10
+
+# Worker-only mode: removes worker label from control-plane nodes
+# and sets mastersSchedulable: false on the Scheduler object
+worker_only: false
+
+# Drain control-plane nodes to move existing workloads to dedicated workers
+# Only applies when worker_only is true
+worker_drain_control_plane: true
