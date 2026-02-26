@@ -8,7 +8,7 @@
     api_version: v1
     kind: Node
     label_selectors:
-      - "node-role.kubernetes.io/control-plane"
+    - "node-role.kubernetes.io/control-plane"
   register: r_control_plane_nodes
 
 - name: Get master-labeled nodes
@@ -16,7 +16,7 @@
     api_version: v1
     kind: Node
     label_selectors:
-      - "node-role.kubernetes.io/master"
+    - "node-role.kubernetes.io/master"
   register: r_master_nodes
 
 - name: Build list of control-plane nodes with worker label
