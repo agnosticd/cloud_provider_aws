@@ -78,3 +78,7 @@
     - name: Wait for worker nodes to be Ready
       when: worker_instance_count | int > 0
       ansible.builtin.include_tasks: wait_for_nodes.yml
+
+    - name: Configure worker-only mode
+      when: worker_only | default(false) | bool
+      ansible.builtin.include_tasks: configure_worker_only.yml
