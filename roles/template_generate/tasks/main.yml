@@ -58,7 +58,7 @@
       name: "{{ bucket_templates }}"
 
   - name: Copy Template to S3
-    amazon.aws.aws_s3:
+    amazon.aws.s3_object:
       bucket: "{{ bucket_templates }}"
       object: "{{ config }}.{{ guid }}.{{ cloud_provider }}_cloud_template"
       src: "{{ cloudformation_template }}"
@@ -81,7 +81,7 @@
       or lookup('file', cloudformation_template) | from_json is succeeded
     success_msg: Cloudformation template is syntactically valid
 
-- name: Copy original !Ref CF template back in place
+- name: Copy original !Ref CF template back in place # noqa: no-handler
   when: r_ref_presence.changed
   ansible.builtin.copy:
     src: "{{ r_ref_presence.backup }}"

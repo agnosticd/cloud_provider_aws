@@ -36,7 +36,7 @@
   loop: "{{ r_ec2_info['instances'] }}"
   loop_control:
     label: "{{ item.tags.internaldns | default(item.private_dns_name) }}"
-  ignore_errors: true
+  failed_when: false
 
 - name: Add hosts to the current inventory
   when: item.state.name != 'terminated'

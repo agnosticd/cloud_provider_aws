@@ -40,24 +40,24 @@
   ansible.builtin.set_fact:
     __all_subnets: >-
       {{
-      ( instances
+      (instances
       | default([])
       | json_query('[].subnet')
       | list
-      | unique )
-      + ( instances
+      | unique)
+      + (instances
       | default([])
       | json_query('[].subnets')
       | list
-      | unique )
+      | unique)
       }}
 
 - name: Locate Availability Zones
   when:
-    # Run only if some instance types were found
-    - __all_instance_types | length > 0
-    # Run only if the AWS CLI has the cabability to list offerings
-    - r_aws_type_offerings.rc == 0
-    # Do not try to pick the AZ when the config uses several Subnets
-    - __all_subnets | length <= 1
+  # Run only if some instance types were found
+  - __all_instance_types | length > 0
+  # Run only if the AWS CLI has the cabability to list offerings
+  - r_aws_type_offerings.rc == 0
+  # Do not try to pick the AZ when the config uses several Subnets
+  - __all_subnets | length <= 1
   ansible.builtin.include_tasks: locate_availability_zones_tasks.yml

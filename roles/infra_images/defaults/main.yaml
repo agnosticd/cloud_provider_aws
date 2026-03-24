@@ -12,7 +12,7 @@ _infra_images_arch: "{{ ocp4_architecture_cluster | default(infra_images_arch) |
 infra_images_predefined:
 
   RHELAI12:
-    owner: "{{ infra_ai_images_redhat_owner_id  | default(infra_images_redhat_owner_id) }}"
+    owner: "{{ infra_ai_images_redhat_owner_id | default(infra_images_redhat_owner_id) }}"
     name: rhel-ai-nvidia-1.2*
     architecture: "{{ _infra_images_arch }}"
     aws_filters:
@@ -24,7 +24,7 @@ infra_images_predefined:
     architecture: "{{ _infra_images_arch }}"
     aws_filters:
       is-public: false
-      
+
   RHEL-10.0-GOLD-latest:
     owner: "{{ infra_images_redhat_owner_id }}"
     name: RHEL-10.0.*_HVM-*Access*

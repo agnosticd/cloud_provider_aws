@@ -1,5 +1,6 @@
 ---
-- when: agnosticd_images[_instance.name] is not defined
+- name: Look up image for instance
+  when: agnosticd_images[_instance.name] is not defined
   block:
   - name: Lookup image for {{ _instance.name }}
     amazon.aws.ec2_ami_info:
