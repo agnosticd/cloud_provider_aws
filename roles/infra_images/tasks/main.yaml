@@ -12,7 +12,7 @@
 - name: Debug images
   when: agnosticd_images is defined
   block:
-  - name: debug agnosticd_image
+  - name: Debug agnosticd_image
     ansible.builtin.debug:
       var: agnosticd_images
       verbosity: 3

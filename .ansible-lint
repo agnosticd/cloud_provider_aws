@@ -1,0 +1,19 @@
+---
+profile: production
+
+exclude_paths:
+- tests/
+
+skip_list:
+- var-naming[no-role-prefix]
+- var-naming[pattern]
+- galaxy[no-changelog]
+- role-name
+- ignore-errors
+
+mock_modules:
+- agnosticd.core.agnosticd_user_info
+- agnosticd.core.agnosticd_user_data
+- agnosticd.core.agnosticd_odcr
+- agnosticd.core.agnosticd_get_all_images
+- agnosticd.core.image_to_ec2_filters

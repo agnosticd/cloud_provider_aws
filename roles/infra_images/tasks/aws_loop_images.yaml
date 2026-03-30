@@ -1,6 +1,6 @@
 ---
 - name: Include loop image file
-  include_tasks: aws_loop_image.yaml
+  ansible.builtin.include_tasks: aws_loop_image.yaml
   loop: "{{ _images | default([]) }}"
   loop_control:
     loop_var: _image
