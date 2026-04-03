@@ -3,9 +3,9 @@
 # Clones existing MachineSet specs and updates instance type and naming
 
 - name: Validate worker_machineset_suffix is provided
+  when: worker_machineset_suffix | default('') | length == 0
   ansible.builtin.fail:
     msg: "worker_machineset_suffix is required when creating MachineSets with a different instance type"
-  when: worker_machineset_suffix | default('') | length == 0
 
 - name: Calculate round-robin distribution
   ansible.builtin.set_fact:
@@ -39,9 +39,6 @@
 
 - name: Create new MachineSets
   kubernetes.core.k8s:
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_cluster_admin_token }}"
-    validate_certs: "{{ openshift_validate_certs | default(false) }}"
     api_version: machine.openshift.io/v1beta1
     kind: MachineSet
     namespace: openshift-machine-api

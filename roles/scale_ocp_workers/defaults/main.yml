@@ -18,18 +18,9 @@ worker_instance_type: ""
 # Results in names like: ocp-xjgsc-worker-us-east-2a-gpu
 worker_machineset_suffix: "compute"
 
-# Timeout settings for waiting for nodes to become Ready
-worker_scale_timeout: 600
-worker_scale_retries: 60
+# Retry settings for waiting for nodes to report Ready status
+worker_scale_retries: 90
 worker_scale_delay: 10
-
-# CSR approval settings
-# If nodes don't become Ready within worker_scale_csr_wait_seconds,
-# the role will start approving pending CSRs
-worker_scale_approve_csrs: true
-worker_scale_csr_wait_seconds: 180
-worker_scale_csr_retries: 30
-worker_scale_csr_delay: 10
 
 # Worker-only mode: removes worker label from control-plane nodes
 # and sets mastersSchedulable: false on the Scheduler object
