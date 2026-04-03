@@ -32,9 +32,6 @@
 
 - name: Scale MachineSets
   kubernetes.core.k8s:
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_cluster_admin_token }}"
-    validate_certs: "{{ openshift_validate_certs | default(false) }}"
     api_version: machine.openshift.io/v1beta1
     kind: MachineSet
     namespace: openshift-machine-api
