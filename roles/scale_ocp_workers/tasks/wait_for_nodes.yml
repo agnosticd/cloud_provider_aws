@@ -1,15 +1,9 @@
 ---
-# Wait for worker nodes to reach Ready status
-# First tries a quick wait, then falls back to CSR approval if needed
-- name: Calculate expected worker count
-  ansible.builtin.set_fact:
-    expected_worker_count: "{{ worker_instance_count | int }}"
-
 - name: Print wait parameters
   ansible.builtin.debug:
-    msg: "Waiting {{ worker_scale_retries }}*{{ worker_scale_delay }} seconds for {{ expected_worker_count }} worker nodes to be Ready"
+    msg: "Waiting {{ worker_scale_retries }}*{{ worker_scale_delay }} seconds for {{ worker_instance_count }} worker nodes to be Ready"
 
-- name: Wait for worker nodes to be Ready
+- name: Wait for worker nodes to be ready
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Node
@@ -18,65 +12,39 @@
     - "!node-role.kubernetes.io/control-plane"
   register: r_worker_nodes
   until: >-
-    (r_worker_nodes.resources | length >= expected_worker_count | int)
+    (r_worker_nodes.resources | length >= worker_instance_count | int)
     and
     (r_worker_nodes.resources
       | selectattr('status.conditions', 'defined')
       | rejectattr('status.conditions', 'equalto', [])
       | list
       | json_query("[?status.conditions[?type=='Ready' && status=='True' && reason=='KubeletReady']]")
-      | length >= expected_worker_count | int)
+      | length >= worker_instance_count | int)
   retries: "{{ worker_scale_retries | int }}"
   delay: "{{ worker_scale_delay }}"
   ignore_errors: true
 
-- name: Check if initial wait succeeded
+- name: Print worker node status
+  ansible.builtin.debug:
+    msg:
+    - "Worker nodes ready: {{ r_worker_nodes.resources | length }}"
+    - "Node names: {{ r_worker_nodes.resources | map(attribute='metadata.name') | list }}"
+
+- name: Check if worker nodes are ready
   ansible.builtin.set_fact:
-    initial_wait_succeeded: >-
+    _worker_nodes_ready: >-
       {{
-        (r_worker_nodes.resources | length >= expected_worker_count | int)
+        (r_worker_nodes.resources | length >= worker_instance_count | int)
         and
         (r_worker_nodes.resources
           | selectattr('status.conditions', 'defined')
           | rejectattr('status.conditions', 'equalto', [])
           | list
           | json_query("[?status.conditions[?type=='Ready' && status=='True' && reason=='KubeletReady']]")
-          | length >= expected_worker_count | int)
+          | length >= worker_instance_count | int)
       }}
 
-- name: Wait more for worker nodes
-  when: not initial_wait_succeeded
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Node
-    label_selectors:
-    - "node-role.kubernetes.io/worker"
-    - "!node-role.kubernetes.io/control-plane"
-  register: r_worker_nodes
-  until: >-
-    (r_worker_nodes.resources | length >= expected_worker_count | int)
-    and
-    (r_worker_nodes.resources
-      | selectattr('status.conditions', 'defined')
-      | rejectattr('status.conditions', 'equalto', [])
-      | list
-      | json_query("[?status.conditions[?type=='Ready' && status=='True' && reason=='KubeletReady']]")
-      | length >= expected_worker_count | int)
-  retries: "{{ worker_scale_retries | int }}"
-  delay: "{{ worker_scale_delay }}"
-
-# Get final node status
-- name: Get final worker node status
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Node
-    label_selectors:
-    - "node-role.kubernetes.io/worker"
-    - "!node-role.kubernetes.io/control-plane"
-  register: r_worker_nodes_final
-
-- name: Display final worker node status
-  ansible.builtin.debug:
-    msg:
-    - "Worker nodes Ready: {{ r_worker_nodes_final.resources | length }}"
-    - "Node names: {{ r_worker_nodes_final.resources | map(attribute='metadata.name') | list }}"
+- name: Fail if less worker nodes are ready than expected
+  when: not _worker_nodes_ready
+  ansible.builtin.fail:
+    msg: "Nodes are not ready after {{ worker_scale_retries }}*{{ worker_scale_delay }} seconds"

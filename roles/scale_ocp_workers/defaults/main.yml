@@ -19,7 +19,7 @@ worker_instance_type: ""
 worker_machineset_suffix: "compute"
 
 # Retry settings for waiting for nodes to report Ready status
-worker_scale_retries: 60
+worker_scale_retries: 90
 worker_scale_delay: 10
 
 # Worker-only mode: removes worker label from control-plane nodes
