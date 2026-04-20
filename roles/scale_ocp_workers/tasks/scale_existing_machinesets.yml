@@ -8,7 +8,7 @@
 
 - name: Build replica distribution list
   ansible.builtin.set_fact:
-    replica_distribution: >-
+    replica_distribution: |
       {%- set total = worker_instance_count | int -%}
       {%- set count = machineset_count | int -%}
       {%- set base = total // count -%}
@@ -21,7 +21,7 @@
           {%- set _ = result.append(base) -%}
         {%- endif -%}
       {%- endfor -%}
-      {{ result }}
+      {{ result | to_json | from_json }}
 
 - name: Display scaling plan
   ansible.builtin.debug:
