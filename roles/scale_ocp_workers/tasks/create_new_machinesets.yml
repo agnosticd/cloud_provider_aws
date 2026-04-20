@@ -44,7 +44,10 @@
     namespace: openshift-machine-api
     name: "{{ item.0.metadata.name }}-{{ worker_machineset_suffix }}"
     state: present
-    definition:
+    definition: >-
+      {{ _machineset_def | to_json | from_json }}
+  vars:
+    _machineset_def:
       metadata:
         labels:
           machine.openshift.io/cluster-api-cluster: "{{ cluster_infrastructure_name }}"
