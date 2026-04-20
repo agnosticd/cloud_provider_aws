@@ -37,9 +37,14 @@
     namespace: openshift-machine-api
     name: "{{ item.0.metadata.name }}"
     state: present
-    definition:
-      spec:
-        replicas: "{{ item.1 | int }}"
+    definition: "{{ base_def | combine({'spec': {'replicas': item.1 | int}}, recursive=True) }}"
+  vars:
+    base_def:
+      apiVersion: machine.openshift.io/v1beta1
+      kind: MachineSet
+      metadata:
+        name: "{{ item.0.metadata.name }}"
+        namespace: openshift-machine-api
   loop: "{{ existing_machinesets | zip(replica_distribution) | list }}"
   loop_control:
     label: "{{ item.0.metadata.name }} -> {{ item.1 }} replicas"
