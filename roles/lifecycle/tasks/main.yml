@@ -16,6 +16,27 @@
         "tag:guid": "{{ guid }}"
     register: r_instances
 
+  - name: Debug instances matched by tag:guid
+    ansible.builtin.debug:
+      msg:
+        - "guid={{ guid }}"
+        - "aws_region={{ aws_region_final | default(aws_region) }}"
+        - "count={{ r_instances.instances | default([]) | length }}"
+        - >-
+          instances={{
+            r_instances.instances | default([])
+            | map(attribute='tags')
+            | map(attribute='Name')
+            | list
+          }}
+        - >-
+          states={{
+            r_instances.instances | default([])
+            | map(attribute='state')
+            | map(attribute='name')
+            | list
+          }}
+
   - name: Stop instances
     when:
     - ACTION == 'stop'
